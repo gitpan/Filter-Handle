@@ -1,0 +1,47 @@
+
+    Filter::Handle.pm
+
+This module allows you to apply arbitrary filters to output
+filehandles. You can perform any sorts of transformations on
+the outgoing text: you can prepend it with data, you can
+replace all instances of one word with another, etc.
+
+It has three different interfaces: functional, tie, and
+object-oriented. You can use whichever you like.
+
+PREREQUISITES
+
+There are no prerequisite modules.
+
+INSTALLATION
+
+Installation is done as with most Perl modules by running these
+commands:
+
+    perl Makefile.PL
+    make
+    make test
+    make install
+
+DOCUMENTATION
+
+Documentation is in the module itself in POD form. It will
+be installed automatically in the standard documentation
+directories on your local system. If you'd like a copy in
+HTML, visit
+
+    http://rhumba.pair.com/ben/perl/docs/perldoc/Filter/Handle.html
+
+SUPPORT
+
+If you have any questions, code samples, bug reports, or
+feedback, please email them to:
+
+    ben@rhumba.pair.com
+
+COPYRIGHT
+
+(C) 2000 Benjamin Trott. All rights reserved.
+
+This library is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
