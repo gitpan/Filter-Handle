@@ -1,6 +1,58 @@
 package Filter::Handle;
 use strict;
 
+use vars qw/$VERSION/;
+$VERSION = '0.02';
+
+sub import {
+    my $class  = shift;
+    return if !@_;
+
+    my $caller = caller;
+    if ($_[0] eq "subs") {
+        no strict 'refs';
+        for my $sub (qw/Filter UnFilter/) {
+            *{"${caller}::$sub"} = \&{"${class}::$sub"};
+        }
+    }
+}
+
+sub Filter {
+    my $fh = $_[0];
+    tie *{ $fh }, __PACKAGE__, @_;
+}
+
+sub UnFilter {
+    my $fh = shift;
+    { local $^W = 0; untie *{ $fh } }
+}
+
+sub TIEHANDLE {
+    my $class = shift;
+    my $fh       = shift or die "Need a filehandle to tie.";
+    my $output   = shift || sub {
+        sprintf "%s:%d - %s\n", (caller(1))[1,2], "@_"
+    };
+    bless { fh => $fh, output => $output }, $class;
+}
+
+sub PRINT {
+    my $self = shift;
+    my $fh = *{ $self->{fh} };
+    print $fh $self->{output}->(@_);
+}
+
+sub PRINTF {
+    my $self  = shift;
+    @_ = ($self, sprintf shift, @_);
+    goto &PRINT;
+}
+
+*new = *TIEHANDLE;
+*print = *PRINT;
+*printf = *PRINTF;
+
+
 =head1 NAME
 
 Filter::Handle - Apply filters to output filehandles
@@ -9,6 +61,7 @@ Filter::Handle - Apply filters to output filehandles
 
     use Filter::Handle;
     my $f = Filter::Handle->new(\*STDOUT);
+    $f->print(...);
 
     use Filter::Handle qw/subs/;
     Filter \*STDOUT;
@@ -63,16 +116,21 @@ will be filtered.
 
     {
         my $f = Filter::Handle->new(\*STDOUT);
-        print "I am filtered text";
+        $f->print("I am filtered text");
     }
 
     print "I am normal text";
 
-The object-oriented interface works by filtering the
-filehandle while your object is in scope. Once all
-references to that object have gone out of scope--typically,
-this is after your one reference has gone away--the
-filehandle will no longer be filtered.
+The object-oriented interface works differently than
+the other two interfaces (Functional and Tie); while the
+others use Perl's C<tie> mechanism to provide the filtering,
+the OO interface expects you to explicitly call methods
+on your I<Filter::Handle> object. This is really just a
+difference of approach; you should get the same results,
+either way. The filter is in scope as long as your
+I<Filter::Handle> object is in scope. But in order to
+write to the filtered filehandle, you must explicitly
+use either I<print> or I<printf> methods.
 
 =item * Tie
 
@@ -95,8 +153,6 @@ interfaces; if you want your output written to the same
 handle that you're filtering, you could use:
 
     tie *STDOUT, 'Filter::Handle', \*STDOUT;
-
-Which is exactly what the first two interfaces do.
 
 =back
 
@@ -136,6 +192,39 @@ This prints:
 
 As expected.
 
+=head2 Tips, Tricks, Samples
+
+=over 4
+
+=item * Capturing Output
+
+Normally, output is passed through your filtering
+function, then printed on the output filehandle
+that you're filtering. Suppose that, instead of
+writing the filtered output to the filehandle, you
+just want to capture that filtered output. In other
+words, you want to store the output and not have it
+written to the filehandle. Here's an example that
+does just that:
+
+    my($out, $i);
+    Filter \*STDOUT, sub {
+        $out .= sprintf "%d: %s\n", $i++, "@_";
+        ()
+    };
+    print "Foo";
+    print "Bar";
+    UnFilter \*STDOUT;
+
+C<$out> now contains:
+
+    0: Foo
+    1: Bar
+
+And nothing has been written to STDOUT.
+
+=back
+
 =head1 CAVEATS
 
 Note that this won't work correctly with output from
@@ -152,62 +241,5 @@ Thanks to tilly, chromatic, and merlyn at PerlMonks.org
 for suggestions, critiques, and code samples.
 
 =cut
-
-use vars qw/$VERSION/;
-$VERSION = '0.01';
-
-sub import {
-    my $class  = shift;
-    return if !@_;
-
-    my $caller = caller;
-    if ($_[0] eq "subs") {
-        no strict 'refs';
-        for my $sub (qw/Filter UnFilter/) {
-            *{"${caller}::$sub"} = \&{"${class}::$sub"};
-        }
-    }
-}
-
-sub Filter {
-    my $fh = $_[0];
-    tie *{ $fh }, __PACKAGE__, @_;
-}
-
-sub UnFilter {
-    my $fh = shift;
-    { local $^W = 0; untie *{ $fh } }
-}
-
-sub TIEHANDLE {
-    my $class = shift;
-    my $fh       = shift or die "Need a filehandle to tie.";
-    my $output   = shift || sub {
-        sprintf "%s:%d - %s\n", (caller(1))[1,2], "@_"
-    };
-    bless { fh => $fh, output => $output }, $class;
-}
-
-sub new {
-    Filter(@_[1..$#_]);
-    bless { fh => $_[1] }, $_[0]
-}
-
-sub DESTROY {
-    my $self = shift;
-    UnFilter($self->{fh});
-}
-
-sub PRINT {
-    my $self = shift;
-    my $fh = *{ $self->{fh} };
-    print $fh $self->{output}->(@_);
-}
-
-sub PRINTF {
-    my $self  = shift;
-    @_ = ($self, sprintf shift, @_);
-    goto &PRINT;
-}
 
 1;

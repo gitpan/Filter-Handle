@@ -18,16 +18,22 @@ print "ok 1\n";
 # (correspondingly "not ok 13") depending on the success of chunk 13
 # of the test code):
 
-## 2. Test scoping issues with OO interface.
+## 2. Test OO interface and printf method.
 {
-    my $f = Filter::Handle->new(\*STDOUT);
+    my $out;
+    my $f = Filter::Handle->new(\*STDOUT, sub {
+        $out = sprintf "%d: %s\n", 1, "@_";
+        ()
+    });
+    $f->printf("(%s)", "Foo");
+    print $out eq "1: (Foo)\n" ? "ok 2\n" : "not ok 2\n";
 }
-print tied *STDOUT ? "not ok 2\n" : "ok 2\n";
 
 ## 3. Test Filter/UnFilter routines.
 my $out;
 Filter \*STDOUT, sub {
     $out = sprintf "%d: %s\n", 1, "@_";
+    ()
 };
 print "Foo";
 UnFilter \*STDOUT;

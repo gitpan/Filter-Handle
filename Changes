@@ -1,5 +1,12 @@
 Revision history for Perl extension Filter::Handle.
 
+0.02  Thu Aug 18 9:15:12 2000
+	- changed OO interface; now must explicitly call
+	  print and printf methods; got rid of DESTROY
+	- fixed test script so that it doesn't write
+	  test string to STDOUT
+	- added tips, tricks, samples (to be expanded)
+
 0.01  Thu Aug 17 19:34:18 2000
 	- original version; created by h2xs 1.19
 
